@@ -128,60 +128,71 @@ class: center, middle, inverse
 ---
 # Concurrency on iOS and OSX
 ## Thread, GCD & NSOperation
-
-## HEINRICH Yannick
-## [@YaGeek][1]
-## Mars 2014
-
-![Creative Commons License](images/cc.png)
-
-[http://blog.yageek.net/concurrency-objc20][2]
-
-[1]: http://twitter.com/YaGeek
-[2]: http://blog.yageek.net/concurrency-objc20
-[3]: http://creativecommons.org/licenses/by-sa/3.0
+[yageek]
 
 ---
 layout: false
 # Topics
 
 1.	Basics about threading
-2.	Event loops
-3.	Thread Approach
-4.	GCD	
 
 ---
+.left-column[
+  ## Basics on threading
+]
 
-# 1.Basics about threading
-
-
+.right-column[
 Two scheduling units on most widespread operating systems:
 
 *	Processes: each unit has its own virtual memory
+
 *	Threads: sub-units in process that shared virtual memory
-
+]
 ---
-
-# Costs
+.left-column[
+  ## Basics on threading
+  ### - Costs
+]
+.right-column[
 
 *	Each thread/process needs opaque kernel and userspace memory.
+
 *	Context switching and thread creation costs time.
 
+
+
+
+| Item                   |              Approximate cost |
+|------------------------|------------------------------:|
+|                        |                               |
+| Kernel data structures |            Approximately 1 KB |
+| Stack space            |    512 KB (secondary threads) |
+|                        |                               |
+|                        |       8 MB (OS X main thread) |
+|                        |                               |
+|                        |        1 MB (iOS main thread) |
+| Creation time          | Approximately 90 microseconds |
+
+
+.footnote[Source : [Threading Programming Guide](https://developer.apple.com/library/ios/documentation/cocoa/conceptual/Multithreading/CreatingThreads/CreatingThreads.html)]
+]
 ---
+.left-column[
+  ## Basics on threading
+  ### - Costs
+  ### - Multicore systems
+]
+.right-column[
 
-# iOS and OSX
+Most of the latest processors have several cores : 
 
-![Threads costs on Darwin](images/threads_costs.png)
-[1]: https://developer.apple.com/library/ios/documentation/cocoa/conceptual/Multithreading/CreatingThreads/CreatingThreads.html
+*	Threads are **really** parallelized
 
----
+*	Using thread in encouraged
 
-# Multicore systems
+*	Using too many threads could leads to latency
 
-*	Most of the latest processors have several cores
-*	With multicore processors, using thread is encouraged
-*	Thread has to be used smartly : too many threads leads to synchronisation latency (cache, context switch)
-
+]
 
  
   </textarea>
