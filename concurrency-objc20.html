@@ -38,6 +38,7 @@
         border-radius: 5px;
         font-size: 16px;
       }
+	
       .pull-left {
         float: left;
         width: 47%;
@@ -135,6 +136,7 @@ layout: false
 # Topics
 
 1.	Basics about threading
+2. Run loops in iOS/Mac application
 
 ---
 .left-column[
@@ -147,18 +149,37 @@ Two scheduling units on most widespread operating systems:
 *	Processes: each unit has its own virtual memory
 
 *	Threads: sub-units in process that shared virtual memory
+
+![Thread and process](images/thread_process.png)
+.footnote[Source : *Modern Operating Systems* - Andrew S. Tannenbaum]
 ]
 ---
 .left-column[
   ## Basics on threading
-  ### - Costs
 ]
 .right-column[
 
-*	Each thread/process needs opaque kernel and userspace memory.
+A specific amount of time is allowed to units by the scheduler :
+
+* The unit runs, sleeps, wakes up, sleeps, ..., stops
+
+* The strategy used depends on the operating system. 
+
+* Multi-tasks systems often use a variant of *Round-Robin* with priorities.It is a time based multiplexer algorithm. 
+
+![Round-Robin](images/rr.png)
+.footnote[Source : *Modern Operating Systems* - Andrew S. Tannenbaum]
+]
+---
+.left-column[
+  ## Basics on threading
+  ### Costs
+]
+.right-column[
+
+*	Each thread/process needs opaque kernel and/or userspace memory.
 
 *	Context switching and thread creation costs time.
-
 
 
 
@@ -179,8 +200,8 @@ Two scheduling units on most widespread operating systems:
 ---
 .left-column[
   ## Basics on threading
-  ### - Costs
-  ### - Multicore systems
+  ### Costs
+  ### Multicore systems
 ]
 .right-column[
 
@@ -190,11 +211,97 @@ Most of the latest processors have several cores :
 
 *	Using thread in encouraged
 
-*	Using too many threads could leads to latency
+*	Using too many threads could leads to latency en become inefficient.
+
 
 ]
+---
+.left-column[
+  ## Basics on threading
+  ### Costs
+  ### Multicore systems
+  ### Synchronisation
+]
+.right-column[
 
- 
+General C tools used for process/thread communication :
+
+* Semaphore/Mutex
+
+* Spinlock
+
+* Message passing
+
+Bad using of thoses tools could lead to :
+
+* Race conditions
+
+* Deadlock
+]
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+]
+
+.right-column[
+
+A run loop is a single threaded loop that dispatch events to theirs handlers. This thread is generally called the *main thread*
+
+On BSD/Darwin, it is based on `kqueue`, on others systems, it relies on `select`, `poll` or `eppoll` system calls
+
+#### Idea :
+
+```python
+# -> No busy wait due to system calls or kqueue
+while there are still events to process: 
+
+    e = get the next event
+    if there is a callback/handler associated with e:
+        call the callback/handler
+```
+For more informations : 
+
+*	http://en.wikipedia.org/wiki/Reactor_pattern
+*	[An introduction to libuv](http://nikhilm.github.io/uvbook/introduction.html)
+]
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+  ### NSRunLoop
+]
+
+.right-column[
+
+Apple provide its own abstraction of run loop using  the `NSRunLoop` class. 
+
+Each thread has a run loop, but **only the main thread** starts automatically it.
+
+![NSRunLoop sequence diagramm](images/nsrunloop.jpg)
+
+]
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+  ### NSRunLoop
+  ### NSRunLoop Sources
+]
+
+.right-column[
+
+Handlers for events are created using the `CFRunLoopSourceRef` object. 
+
+For input events as mouse or keayboard events, `NSPort`, `NSConnection` and `NSTimer`, the corresponding `CFRunLoopSourceRef` are managed automatically.
+
+It's possible to create custom source of events : [Threading Programming Guide - Configuring Run Loop Sources](https://developer.apple.com/library/ios/documentation/cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html#//apple_ref/doc/uid/10000057i-CH16-SW7)
+
+![Custom input sources](images/custominputsource.jpg)
+]
+
+
+
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
     </script>
