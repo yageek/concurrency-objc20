@@ -136,7 +136,8 @@ layout: false
 # Topics
 
 1.	Basics about threading
-2. Run loops in iOS/Mac application
+2.	Run loops in iOS/Mac application
+3.	Concurrency at application level
 
 ---
 .left-column[
@@ -299,8 +300,33 @@ It's possible to create custom source of events : [Threading Programming Guide -
 
 ![Custom input sources](images/custominputsource.jpg)
 ]
+---
+.left-column[
+  ## Concurrency at application level
+  ### Usual needs
+]
+.right-column[
+At application level, needs are usually the same :
 
+*	Downloading data asynchronously and notify the GUI
 
+*	Compute heavy data in background and notify the GUI
+
+*	Synchronize several concurrent tasks at some point of execution
+
+*	Ensure thread-safety of API
+
+]
+---
+.left-column[
+  ## Concurrency at application level
+  ### Usual needs
+  ### Using threads
+]
+
+.right-column[
+
+]
 
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
