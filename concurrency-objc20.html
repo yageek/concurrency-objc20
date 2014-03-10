@@ -117,6 +117,9 @@
         float: right;
         padding-top: 2em;
       }
+      #slide-cc-example .right-column code, #slide-cc-example-2 .right-column code {
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -138,7 +141,9 @@ layout: false
 1.	Basics about threading
 2.	Run loops in iOS/Mac application
 3.	Concurrency at application level
-
+---
+class: center, middle, inverse
+# Basics on threading 
 ---
 .left-column[
   ## Basics on threading
@@ -212,9 +217,12 @@ Most of the latest processors have several cores :
 
 *	Using thread in encouraged
 
-*	Using too many threads could leads to latency en become inefficient.
+
+Using too many threads could leads to *threading overhead*
 
 
+![Threading overhead](images/cwl_overhead.png)
+.footnote[ Source : *[The overhead of spawning threads (a performance experiment)](http://www.cocoawithlove.com/2010/09/overhead-of-spawning-threads.html)* - Matt Gallagher]
 ]
 ---
 .left-column[
@@ -240,6 +248,9 @@ Bad using of thoses tools could lead to :
 * Deadlock
 ]
 ---
+class: center, middle, inverse
+# Run loops in iOS/Mac application
+---
 .left-column[
   ##  Run loops in iOS/Mac application
   ### Reactor Pattern
@@ -247,7 +258,7 @@ Bad using of thoses tools could lead to :
 
 .right-column[
 
-A run loop is a single threaded loop that dispatch events to theirs handlers. This thread is generally called the *main thread*
+A run loop is a single threaded loop that dispatch events synchronously to theirs handlers. This thread is generally called the *main thread*
 
 On BSD/Darwin, it is based on `kqueue`, on others systems, it relies on `select`, `poll` or `eppoll` system calls
 
@@ -316,17 +327,140 @@ At application level, needs are usually the same :
 
 *	Ensure thread-safety of API
 
+Example of patterns to use :
+
+*   Producer/Consumer
+
+*   Working Queue
+
+*   Message passing
+
 ]
 ---
 .left-column[
   ## Concurrency at application level
   ### Usual needs
-  ### Using threads
+  ### Core Foundation
 ]
 
 .right-column[
 
+*Core Foundation* tools to implement them : 
+
+*   `NSThread`, `[NSThread detachNewThreadSelector:toTarget:withObject:]`
+*   `[NSObject performSelectorInBackground:withObject:]`,`[NSObject performSelectorOnMainThread:withObject:]`
+*   `NSLock`
+*   `NSRecursiveLock`
+*   `NSConditionLock`
+*   `NSDistributedLock`
+*   `NSCondition`
+*   `@synchronisze(lock)` statement
+*   Atomic operations `OSAtomicOr32`, `OSAtomicAdd32`,...
+*   POSIX threads, conditions and mutex
+
+
+Drawbacks :
+
+*   You may feel to reinvent the wheel
+*   Boilerplate code
+*   Synchronisation with the main thread ?
+*   Code not always easy to read/understand
+*   Easy to enter in race conditions
+*   Efficiency vs speed in coding ?
 ]
+---
+name: cc-example
+.left-column[
+  ## Concurrency at application level
+  ### Usual needs
+  ### Core Foundation
+  ### Example 1
+]
+
+.right-column[
+
+Producer/Consumer
+
+```objc
+
+/* Producer */
+id condLock = [[NSConditionLock alloc] initWithCondition:NO_DATA];
+ 
+while(true)
+{
+    [condLock lock];
+    /* Add data to the queue. */
+    [condLock unlockWithCondition:HAS_DATA];
+}
+
+/* Consumer */
+while (true)
+{
+    [condLock lockWhenCondition:HAS_DATA];
+    /* Remove data from the queue. */
+    [condLock unlockWithCondition:(isEmpty ? NO_DATA : HAS_DATA)];
+ 
+    // Process the data locally.
+}
+```
+]
+---
+name: cc-example-2
+.left-column[
+  ## Concurrency at application level
+  ### Usual needs
+  ### Core Foundation
+  ### Example 1
+  ### Example 2
+]
+
+.right-column[
+
+Download an URL asynchronously in the background and get notified in the main thread ? (before iOS 5)
+
+```objc
+@implementation AFURLConnectionOperation
+/* AFNetworking : https://github.com/AFNetworking/AFNetworking */
+
+/* Call in NSThread initWithTarget:selector:object */
+
++ (void)networkRequestThreadEntryPoint:(id)__unused object {
+    @autoreleasepool {
+        [[NSThread currentThread] setName:@"AFNetworking"];
+
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        [runLoop addPort:[NSMachPort port] forMode:NSDefaultRunLoopMode];
+        [runLoop run];
+    }
+}
+
+- (void)start
+{
+  /* ... */
+   [self performSelector:@selector(operationDidStart) 
+   onThread:[[self class] networkRequestThread] withObject:nil];
+   /* ... */
+}
+
+- (void)operationDidStart {
+     self.connection = [[NSURLConnection alloc] initWithRequest:self.request 
+     delegate:self startImmediately:NO];
+        
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        for (NSString *runLoopMode in self.runLoopModes) {
+            [self.connection scheduleInRunLoop:runLoop forMode:runLoopMode];
+        }
+        
+        [self.connection start];
+    }
+}
+```
+]
+---
+class: center, middle, inverse
+# Thread pool pattern
+---
+
 
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
