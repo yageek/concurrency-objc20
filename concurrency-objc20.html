@@ -821,7 +821,6 @@ class: smallcode
   ### Standing on the shoulders of a giant
   ### NSOperationQueue
   ### NSOperation
-  ### NSBlockOperation
 ]
 
 .right-column[
@@ -867,6 +866,34 @@ MyCustomOperation* op = [[MyCustomOperation alloc] init];
 [concurrentQueue addOperation:op];
 
 [concurrentQueue waitUntilAllOperationsAreFinished];
+```
+
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+  ### Example
+  ### Synchronisation
+]
+
+.right-column[
+Easy to synchronise tasks with dependency :
+
+```objc
+
+NSBlockOperation * a = [NSBlockOperation blockOperationWiBlock:^{ printf("A\n");}];
+NSBlockOperation * b = [NSBlockOperation blockOperationWiBlock:^{ printf("B\n");}];
+NSBlockOperation * c = [NSBlockOperation blockOperationWiBlock:^{ printf("C\n");}];
+
+[a addDependency:b];
+[b addDependency:c];
+
+[c.completionBlock:^{ printf("End of C\n");}];
+
 ```
 
 ]
