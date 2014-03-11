@@ -646,11 +646,11 @@ Regroups tasks in a set to synchronize. It is based on a counter of *outstanding
 dispatch_group_t group = dispatch_group_create();
 
 dispatch_block_t task1 = ^{ printf("Task 1\n");},
-                 task2 = ^{ printf("Task 2\n");}
+                 task2 = ^{ printf("Task 2\n");},
                  task3 = ^{
                             NSInteger i;
                             for(i = 0; i < INT16_MAX; ++i); 
-                          }  
+                          };  
 
 dispatch_queue_t queue;
 queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
@@ -691,12 +691,184 @@ dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 
     dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 ```
-*   Schedule a block when all previous committed blocks end with dispatch_group_notify`
+*   Schedule a block when all previous committed blocks end with `dispatch_group_notify`
 ```objc
 dispatch_group_notify(group, queue, ^{ 
-       printf("I am called at the end !")}
+       printf("I am called at the end !\n");}
     );
 ```
+]
+---
+class: smallcode
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+  ### Barriers
+]
+
+.right-column[
+
+Barriers offers a very elegent way to synchronize tasks within a concurrent queue :
+```objc
+dispatch_block_t readTask1 = ^{ printf("Reading ...\n");},
+                 readTask2 = ^{ printf("Reading ...\n");},
+                 readTask3 = ^{ printf("Reading ...\n");},
+                 writeTask4 = ^{printf("Writing \n");};
+
+dispatch_queue_t queue;
+queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+
+dispatch_async(queue,readTask1);
+dispatch_async(queue,readTask2);
+
+dispatch_barrier_async(queue,writeTask4);
+
+dispatch_async(queue,readTask3);
+```
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+  ### Barriers
+  ### More
+]
+
+.right-column[
+Lot of others features :
+
+*   Target Queue
+*   Semaphores
+*   Dispatch sources
+*   Queue Data
+*   Dispatch I/O
+
+See : 
+
+*   [Concurrency Programming Guide](https://developer.apple.com/library/ios/documentation/General/Conceptual/ConcurrencyProgrammingGuide/Introduction/Introduction.html)
+
+*   [NSBlog](https://www.mikeash.com/pyblog/) - Topics on GCD
+
+* [CocoaSamurai - Guide to blocks and grand central dispatch](http://cocoasamurai.blogspot.fr/2009/09/guide-to-blocks-grand-central-dispatch.html)
+
+*   WWDC 2011 - *Mastering Grand Central Dispatch*
+
+*   WWDC 2010 - *Introducing Blocks and Grand Central Dispatch on iPhone*
+
+*   WWDC 2010 - *Simplifying iPhone App Development with Grand Central Dispatch*
+]
+---
+class: center, middle, inverse
+# NSOperation
+---
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+]
+
+.right-column[
+
+NSOperation is built on top of GCD :
+
+*   Higher-level of abstraction
+
+*   Objective-C API
+
+*   Ready to use with Apple Framework : UIKit, AVFoundation, MapKit, OpenGL, ...
+
+*   Small API - Enough for most basic cases
+
+All magic is hidden in two objects : 
+
+*   `NSOperation` : represents tasks
+*   `NSOperationQueue` : represents queue
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+]
+
+.right-column[
+
+#### Create queues
+
+```objc
+/* Get Main Queue */
+NSOperationQueue * mainQueue = [NSOperationQueue mainQueue];
+
+/* Create Serial Queue */
+NSOperationQueue * serialQueue = [[NSOperationQueue alloc] init];
+serialQueue.name = @"com.company.app.serial";
+serialQueue.maxConcurrentOperationCount = 0;
+
+/* Create Concurrent Queue */
+NSOperationQueue * concurrentQueue = [[NSOperationQueue alloc] init];
+```
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+  ### NSBlockOperation
+]
+
+.right-column[
+ 
+ *    Abtract class representing a task.
+
+ *    Need to subclass -> See Documentation
+
+ *    Manage queue and thread priorities
+
+ *    Completion block feature
+
+Summerize : 
+
+1. Implement `start`, `main`, `isConcurrent`, `isFinished` and `isExecuting` methods
+
+2. Test for cancel events in your `main` and `start` methods when necessary
+
+3. Add operation to a queue
+
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+  ### Example
+]
+
+.right-column[
+
+```objc
+
+NSOperationQueue * concurrentQueue = [[NSOperationQueue alloc] init];
+
+MyCustomOperation* op = [[MyCustomOperation alloc] init];
+
+[concurrentQueue addOperationWithBlock:^{ printf("Hello \n");}];
+[concurrentQueue addOperationWithBlock:^{ printf("World \n");}];
+
+[concurrentQueue addOperation:op];
+
+[concurrentQueue waitUntilAllOperationsAreFinished];
+```
+
 ]
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
