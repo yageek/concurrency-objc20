@@ -117,7 +117,7 @@
         float: right;
         padding-top: 2em;
       }
-      #slide-cc-example .right-column code, #slide-cc-example-2 .right-column code {
+      div.smallcode code {
         font-size: 12px;
       }
     </style>
@@ -389,7 +389,7 @@ Drawbacks :
 *   Efficiency vs speed in coding ?
 ]
 ---
-name: cc-example
+class: smallcode
 .left-column[
   ## Concurrency
   ### Usual needs
@@ -425,7 +425,7 @@ while (true)
 ```
 ]
 ---
-name: cc-example-2
+class: smallcode
 .left-column[
   ## Concurrency
   ### Concurrency vs Parallelism
@@ -552,7 +552,82 @@ For each application, the OS provide default queues :
 
 *   One *main queue* : queue associated with the main thread
 
-*   Four *concurrent queues* with descending priorities (three prior to iOS 5/ OSX 10.7) 
+*   Four *concurrent queues* with descending priorities 
+]
+---
+class: smallcode
+### Create queues
+```objc
+/* Get the main thread queue */
+dispatch_queue_t * mainQueue = dispatch_get_main_queue();
+
+/* Get globals concurrent queue */
+dispatch_queue_t * concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
+dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+dispatch_queue_t * concurrent3 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0);
+dispatch_queue_t * concurrent4 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0);
+
+/* Create new Serial */
+dispatch_queue_t * serial = dispatch_queue_create("com.company.myapp", DISPATCH_QUEUE_SERIAL );
+dispatch_queue_t * serial2 = dispatch_queue_create("com.company.myapp", NULL );
+
+/* Create new concurrent queue (Since iOS 5) */
+dispatch_queue_t * concurrent5 = dispatch_queue_create("com.company.myapp", DISPATCH_QUEUE_CONCURRENT );
+```
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+]
+
+.right-column[
+
+Representing tasks with blocks with `dispatch_block_t`:
+
+```objc
+typedef void (^dispatch_block_t)(void);
+dispatch_block_t block_task = ^{ printf("Task1 \n");}
+```
+Representing tasks with functions with `dispatch_function_t`:
+
+```objc
+typedef void (*dispatch_function_t)(void*)
+void function_task(void * context){
+  printf("Task with function \n");
+}
+```
+Enqueueing task is either **synchronously** or **asynchronously**:
+```objc
+//Return immediatly
+dispatch_async(myQueue,block_task);
+dispatch_async_f(myQueue,function_task);
+
+//Wait for task to end
+dispatch_sync(myQueue,block_task);
+dispatch_sync_f(myQueue,function_task);
+```
+You're encouraged to use *blocks* and *asynchronous enqueueing* as often as possible.
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+]
+
+.right-column[
+
+Other cool stuff :
+
+*   `dispatch_apply`,`dispatch_apply_f` : execute task multiple times
+
+*   `dispatch_after`,`dispatch_after_f`: execute a task after a specified amount of time
+
+*   `dispatch_once` : execute the task only once during the application
+
 ]
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
