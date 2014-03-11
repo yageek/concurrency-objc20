@@ -894,6 +894,11 @@ NSBlockOperation * c = [NSBlockOperation blockOperationWiBlock:^{ printf("C\n");
 
 [c.completionBlock:^{ printf("End of C\n");}];
 
+NSOperationQueue * queue = [[NSOperationQueue alloc] init];
+
+[queue addOperation:a];
+[queue addOperation:b];
+[queue addOperation:c];
 ```
 
 ]
