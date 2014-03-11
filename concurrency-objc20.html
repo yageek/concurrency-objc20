@@ -563,7 +563,7 @@ dispatch_queue_t * mainQueue = dispatch_get_main_queue();
 
 /* Get globals concurrent queue */
 dispatch_queue_t * concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
-dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
 dispatch_queue_t * concurrent3 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0);
 dispatch_queue_t * concurrent4 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0);
 
@@ -620,14 +620,83 @@ You're encouraged to use *blocks* and *asynchronous enqueueing* as often as poss
 
 .right-column[
 
-Other cool stuff :
+Other cool stuffs :
 
 *   `dispatch_apply`,`dispatch_apply_f` : execute task multiple times
 
 *   `dispatch_after`,`dispatch_after_f`: execute a task after a specified amount of time
 
-*   `dispatch_once` : execute the task only once during the application
+*   `dispatch_once` : execute the task only once during the application life-cycle
+]
+---
+class: smallcode
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+]
 
+.right-column[
+
+Regroups tasks in a set to synchronize. It is based on a counter of *outstanding tasks*
+
+```objc
+dispatch_group_t group = dispatch_group_create();
+
+dispatch_block_t task1 = ^{ printf("Task 1\n");},
+                 task2 = ^{ printf("Task 2\n");}
+                 task3 = ^{
+                            NSInteger i;
+                            for(i = 0; i < INT16_MAX; ++i); 
+                          }  
+
+dispatch_queue_t queue;
+queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+
+dispatch_group_async(group,queue,task1);
+dispatch_group_async(group,queue,task2);
+dispatch_group_async(group,queue,task3);
+
+/* Wait for the oustanding tasks counter to be null*/
+dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+```
+
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+]
+
+.right-column[
+
+*   Manually force increment/decrement the outstanding tasks counter with `dispatch_group_enter` and `dispatch_group_enter`
+```objc
+  
+    dispatch_group_enter(group);
+
+    dispatch_group_async(group,queue,^{
+        awesome_function_with_callback(^{
+
+            /* ... */
+            dispatch_group_leave(group);
+      })
+
+    });
+
+    dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+```
+*   Schedule a block when all previous committed blocks end with dispatch_group_notify`
+```objc
+dispatch_group_notify(group, queue, ^{ 
+       printf("I am called at the end !")}
+    );
+```
 ]
   </textarea>
     <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
