@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Concurrency on iOS and OSX</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style type="text/css">
+      
+ @import url(http://fonts.googleapis.com/css?family=Droid+Serif);
+      @import url(http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+
+      body {
+        font-family: 'Droid Serif';
+        font-size: 20px;
+      }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: 400;
+        margin-bottom: 0;
+      }
+      h1 { font-size: 4em; }
+      h2 { font-size: 2em; }
+      h3 { font-size: 1.6em; }
+      .footnote {
+        position: absolute;
+        bottom: 3em;
+      }
+      li p { line-height: 1.25em; }
+      .red { color: #fa0000; }
+      .large { font-size: 2em; }
+      a, a > code {
+        color: rgb(249, 38, 114);
+        text-decoration: none;
+      }
+      code {
+        -moz-border-radius: 5px;
+        -web-border-radius: 5px;
+        background: #e7e8e2;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+	
+      .pull-left {
+        float: left;
+        width: 47%;
+      }
+      .pull-right {
+        float: right;
+        width: 47%;
+      }
+      .pull-right ~ p {
+        clear: both;
+      }
+      #slideshow .slide .content code {
+        font-size: 0.8em;
+      }
+      #slideshow .slide .content pre code {
+        font-size: 0.9em;
+        padding: 15px;
+      }
+      .inverse {
+        background: #272822;
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+      .inverse h1, .inverse h2 {
+        color: #f3f3f3;
+        line-height: 0.8em;
+      }
+
+      /* Slide-specific styling */
+      #slide-inverse .footnote {
+        bottom: 12px;
+        left: 20px;
+      }
+      #slide-how .slides {
+        font-size: 0.9em;
+        position: absolute;
+        top:  151px;
+        right: 140px;
+      }
+      #slide-how .slides h3 {
+        margin-top: 0.2em;
+      }
+      #slide-how .slides .first, #slide-how .slides .second {
+        padding: 1px 20px;
+        height: 90px;
+        width: 120px;
+        -moz-box-shadow: 0 0 10px #777;
+        -webkit-box-shadow: 0 0 10px #777;
+        box-shadow: 0 0 10px #777;
+      }
+      #slide-how .slides .first {
+        background: #fff;
+        position: absolute;
+        top: 20%;
+        left: 20%;
+        z-index: 1;
+      }
+      #slide-how .slides .second {
+        position: relative;
+        background: #fff;
+        z-index: 0;
+      }
+
+      /* Two-column layout */
+      .left-column {
+        color: #777;
+        width: 20%;
+        height: 92%;
+        float: left;
+      }
+        .left-column h2:last-of-type, .left-column h3:last-child {
+          color: #000;
+        }
+      .right-column {
+        width: 75%;
+        float: right;
+        padding-top: 2em;
+      }
+      div.smallcode code {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+
+name: inverse
+layout: true
+class: center, middle, inverse
+---
+# Concurrency on iOS and OSX
+## Thread, GCD & NSOperation
+[yageek]
+
+---
+layout: false
+# Topics
+
+1.	Basics about threading
+2.	Run loops in iOS/Mac application
+3.	Concurrency 
+3.  Thread Pool Pattern
+---
+class: center, middle, inverse
+# Basics on threading 
+---
+.left-column[
+  ## Basics on threading
+]
+
+.right-column[
+Two scheduling units on most widespread operating systems:
+
+*	Processes: each unit has its own virtual memory
+
+*	Threads: sub-units in process that shared virtual memory
+
+![Thread and process](images/thread_process.png)
+.footnote[Source : *Modern Operating Systems* - Andrew S. Tannenbaum]
+]
+---
+.left-column[
+  ## Basics on threading
+]
+.right-column[
+
+A specific amount of time is allowed to units by the scheduler :
+
+* The unit runs, sleeps, wakes up, sleeps, ..., stops
+
+* The strategy used depends on the operating system. 
+
+* Multi-tasks systems often use a variant of *Round-Robin* with priorities. It is a time based multiplexer algorithm. 
+
+![Round-Robin](images/rr.png)
+.footnote[Source : *Modern Operating Systems* - Andrew S. Tannenbaum]
+]
+---
+.left-column[
+  ## Basics on threading
+  ### Costs
+]
+.right-column[
+
+*	Each thread/process needs opaque kernel and/or userspace memory.
+
+*	Context switching and thread creation costs time.
+
+
+
+| Item                   |              Approximate cost |
+|------------------------|------------------------------:|
+|                        |                               |
+| Kernel data structures |            Approximately 1 KB |
+| Stack space            |    512 KB (secondary threads) |
+|                        |                               |
+|                        |       8 MB (OS X main thread) |
+|                        |                               |
+|                        |        1 MB (iOS main thread) |
+| Creation time          | Approximately 90 microseconds |
+
+
+.footnote[Source : [Threading Programming Guide](https://developer.apple.com/library/ios/documentation/cocoa/conceptual/Multithreading/CreatingThreads/CreatingThreads.html)]
+]
+---
+.left-column[
+  ## Basics on threading
+  ### Costs
+  ### Multicore systems
+]
+.right-column[
+
+Most of the latest processors have several cores : 
+
+*	Threads are **really** parallelized
+
+*	Using thread in encouraged
+
+
+Using too many threads could leads to *threading overhead*
+
+
+![Threading overhead](images/cwl_overhead.png)
+.footnote[ Source : *[The overhead of spawning threads (a performance experiment)](http://www.cocoawithlove.com/2010/09/overhead-of-spawning-threads.html)* - Matt Gallagher]
+]
+---
+.left-column[
+  ## Basics on threading
+  ### Costs
+  ### Multicore systems
+  ### Synchronisation
+]
+.right-column[
+
+General C tools used for process/thread communication :
+
+* Semaphore/Mutex
+
+* Spinlock
+
+* Message passing
+
+Bad using of thoses tools could lead to :
+
+* Race conditions
+
+* Deadlock
+]
+---
+class: center, middle, inverse
+# Run loops in iOS/Mac application
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+]
+
+.right-column[
+
+A run loop is a single threaded loop that dispatch events synchronously to theirs handlers. This thread is generally called the *main thread*
+
+On BSD/Darwin, it is based on `kqueue`, on others systems, it relies on `select`, `poll` or `eppoll` system calls
+
+#### Idea :
+
+```python
+# -> No busy wait due to system calls or kqueue
+while there are still events to process: 
+
+    e = get the next event
+    if there is a callback/handler associated with e:
+        call the callback/handler
+```
+For more informations : 
+
+*	http://en.wikipedia.org/wiki/Reactor_pattern
+*	[An introduction to libuv](http://nikhilm.github.io/uvbook/introduction.html)
+]
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+  ### NSRunLoop
+]
+
+.right-column[
+
+Apple provides its own abstraction of run loop using the `NSRunLoop` class. 
+
+Each thread has a run loop, but **only the main thread** starts it automatically.
+
+![NSRunLoop sequence diagramm](images/nsrunloop.jpg)
+
+]
+---
+.left-column[
+  ##  Run loops in iOS/Mac application
+  ### Reactor Pattern
+  ### NSRunLoop
+  ### NSRunLoop Sources
+]
+
+.right-column[
+
+Handlers for events are created using the `CFRunLoopSourceRef` object. 
+
+For input events as mouse or keayboard events, `NSPort`, `NSConnection` and `NSTimer`, the corresponding `CFRunLoopSourceRef` are managed automatically.
+
+It's possible to create custom sources of events : [Threading Programming Guide - Configuring Run Loop Sources](https://developer.apple.com/library/ios/documentation/cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html#//apple_ref/doc/uid/10000057i-CH16-SW7)
+
+![Custom input sources](images/custominputsource.jpg)
+]
+---
+class: center, middle, inverse
+# Concurrency
+---
+.left-column[
+  ## Concurrency
+  ### Concurrency vs Parallelism
+]
+.right-column[
+
+*   Concurrency : Programming as the composition of independently executing processes.
+
+*   Parallelism : Programming as the simultaneous execution of (possibly related) computations.
+
+* A talk on the subject by Rob Pike (golang team) : [Concurrency vs Parallelism](http://blog.golang.org/concurrency-is-not-parallelism)
+]
+---
+.left-column[
+  ## Concurrency
+  ### Concurrency vs Parallelism
+  ### Usual needs
+]
+.right-column[
+At application level, needs are usually the same :
+
+*	Downloading data asynchronously and notify the GUI
+
+*	Compute heavy data in background and notify the GUI
+
+*	Synchronize several concurrent tasks at some point of execution
+
+*	Ensure thread-safety of API
+
+Example of patterns to use :
+
+*   Producer/Consumer
+
+*   Working Queue
+
+*   Message passing
+
+]
+---
+.left-column[
+  ## Concurrency
+  ### Concurrency vs Parallelism
+  ### Usual needs
+  ### Core Foundation
+]
+
+.right-column[
+
+*Core Foundation* tools to implement them : 
+
+*   `NSThread`, `[NSThread detachNewThreadSelector:toTarget:withObject:]`
+*   `[NSObject performSelectorInBackground:withObject:]`,`[NSObject performSelectorOnMainThread:withObject:]`
+*   `NSLock`
+*   `NSRecursiveLock`
+*   `NSConditionLock`
+*   `NSDistributedLock`
+*   `NSCondition`
+*   `@synchronize(lock)` statement
+*   Atomic operations `OSAtomicOr32`, `OSAtomicAdd32`,...
+*   POSIX threads, conditions and mutex
+
+
+Drawbacks :
+
+*   You may feel to reinvent the wheel
+*   Boilerplate code
+*   Synchronisation with the main thread ?
+*   Code not always easy to read/understand
+*   Easy to enter in race conditions
+*   Efficiency vs speed in coding ?
+]
+---
+class: smallcode
+.left-column[
+  ## Concurrency
+  ### Usual needs
+  ### Core Foundation
+  ### Example 1
+]
+
+.right-column[
+
+Producer/Consumer
+
+```objc
+
+/* Producer */
+id condLock = [[NSConditionLock alloc] initWithCondition:NO_DATA];
+ 
+while(true)
+{
+    [condLock lock];
+    /* Add data to the queue. */
+    [condLock unlockWithCondition:HAS_DATA];
+}
+
+/* Consumer */
+while (true)
+{
+    [condLock lockWhenCondition:HAS_DATA];
+    /* Remove data from the queue. */
+    [condLock unlockWithCondition:(isEmpty ? NO_DATA : HAS_DATA)];
+ 
+    // Process the data locally.
+}
+```
+]
+---
+class: smallcode
+.left-column[
+  ## Concurrency
+  ### Concurrency vs Parallelism
+  ### Usual needs
+  ### Core Foundation
+  ### Example 1
+  ### Example 2
+]
+
+.right-column[
+
+Download an URL asynchronously in the background and get notified in the main thread ? (before iOS 5)
+
+```objc
+/* AFNetworking : https://github.com/AFNetworking/AFNetworking */
+
+@implementation AFURLConnectionOperation
+/* Call in NSThread initWithTarget:selector:object */
+
++ (void)networkRequestThreadEntryPoint:(id)__unused object {
+    @autoreleasepool {
+        [[NSThread currentThread] setName:@"AFNetworking"];
+
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        [runLoop addPort:[NSMachPort port] forMode:NSDefaultRunLoopMode];
+        [runLoop run];
+    }
+}
+
+- (void)start
+{
+  /* ... */
+   [self performSelector:@selector(operationDidStart) 
+   onThread:[[self class] networkRequestThread] withObject:nil];
+   /* ... */
+}
+
+- (void)operationDidStart {
+     self.connection = [[NSURLConnection alloc] initWithRequest:self.request 
+     delegate:self startImmediately:NO];
+        
+        NSRunLoop *runLoop = [NSRunLoop currentRunLoop];
+        for (NSString *runLoopMode in self.runLoopModes) {
+            [self.connection scheduleInRunLoop:runLoop forMode:runLoopMode];
+        }
+        
+        [self.connection start];
+    }
+}
+```
+]
+---
+class: center, middle, inverse
+# Thread pool pattern
+---
+.left-column[
+  ## Thread pool pattern
+]
+.right-column[
+
+Only two notions : ** tasks ** and ** queues **
+
+.center[![Thread Pool Pattern](images/thread_pool.png)]
+
+The thread pool pattern is an abstraction over threads that helps to target on the essential :
+
+*   Number of thread managed by the framework
+*   Number of thread otpimized for the system
+*   Banning thread from the semantic
+
+Examples : 
+
+*   `QThreadPool` in Qt framework
+*   Parallel Extensions in .NET
+*   GCD and `NSOperation` on Darwin
+
+]
+---
+class: center, middle, inverse
+# Grand Central Dispatch
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+]
+
+.right-column[
+
+GCD was developped by Apple Inc. and released in the `libdispatch` library.
+
+*   `libdispatch` is [open source](https://libdispatch.macosforge.org/)
+
+*   C API
+
+*   Block oriented (Objective-C2.0)
+
+*   Queues represented by a unique structure : `dispatch_queue_t`
+
+*   Tasks are represented by blocks
+
+*   Premption capability with priorities
+
+*   Optimized synchronisation tools (I/O, Buffer, General)
+
+*   Terse code
+
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+]
+
+.right-column[
+
+Queues are either **concurrent** or **serial**
+
+*   Serial queue : tasks are executed one a time in FIFO style.
+
+*   Concurrent queue : tasks are runned concurrently
+
+For each application, the OS provide default queues : 
+
+*   One *main queue* : queue associated with the main thread
+
+*   Four *concurrent queues* with descending priorities 
+]
+---
+class: smallcode
+### Create queues
+```objc
+/* Get the main thread queue */
+dispatch_queue_t * mainQueue = dispatch_get_main_queue();
+
+/* Get globals concurrent queue */
+dispatch_queue_t * concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
+dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+dispatch_queue_t * concurrent3 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0);
+dispatch_queue_t * concurrent4 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0);
+
+/* Create new Serial */
+dispatch_queue_t * serial = dispatch_queue_create("com.company.myapp", DISPATCH_QUEUE_SERIAL );
+dispatch_queue_t * serial2 = dispatch_queue_create("com.company.myapp", NULL );
+
+/* Create new concurrent queue (Since iOS 5) */
+dispatch_queue_t * concurrent5 = dispatch_queue_create("com.company.myapp", DISPATCH_QUEUE_CONCURRENT );
+```
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+]
+
+.right-column[
+
+Representing tasks with blocks with `dispatch_block_t`:
+
+```objc
+typedef void (^dispatch_block_t)(void);
+dispatch_block_t block_task = ^{ printf("Task1 \n");}
+```
+Representing tasks with functions with `dispatch_function_t`:
+
+```objc
+typedef void (*dispatch_function_t)(void*)
+void function_task(void * context){
+  printf("Task with function \n");
+}
+```
+Enqueueing task is either **synchronously** or **asynchronously**:
+```objc
+//Return immediatly
+dispatch_async(myQueue,block_task);
+dispatch_async_f(myQueue,function_task);
+
+//Wait for task to end
+dispatch_sync(myQueue,block_task);
+dispatch_sync_f(myQueue,function_task);
+```
+You're encouraged to use *blocks* and *asynchronous enqueueing* as often as possible.
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+]
+
+.right-column[
+
+Other cool stuffs :
+
+*   `dispatch_apply`,`dispatch_apply_f` : execute task multiple times
+
+*   `dispatch_after`,`dispatch_after_f`: execute a task after a specified amount of time
+
+*   `dispatch_once` : execute the task only once during the application life-cycle
+]
+---
+class: smallcode
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+]
+
+.right-column[
+
+Regroups tasks in a set to synchronize. It is based on a counter of *outstanding tasks*
+
+```objc
+dispatch_group_t group = dispatch_group_create();
+
+dispatch_block_t task1 = ^{ printf("Task 1\n");},
+                 task2 = ^{ printf("Task 2\n");},
+                 task3 = ^{
+                            NSInteger i;
+                            for(i = 0; i < INT16_MAX; ++i); 
+                          };  
+
+dispatch_queue_t queue;
+queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+
+dispatch_group_async(group,queue,task1);
+dispatch_group_async(group,queue,task2);
+dispatch_group_async(group,queue,task3);
+
+/* Wait for the oustanding tasks counter to be null*/
+dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+```
+
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+]
+
+.right-column[
+
+*   Manually force increment/decrement the outstanding tasks counter with `dispatch_group_enter` and `dispatch_group_leave`
+```objc
+  
+    dispatch_group_enter(group);
+
+    dispatch_group_async(group,queue,^{
+        awesome_function_with_callback(^{
+
+            /* ... */
+            dispatch_group_leave(group);
+      })
+
+    });
+
+    dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+```
+*   Schedule a block when all previous committed blocks end with `dispatch_group_notify`
+```objc
+dispatch_group_notify(group, queue, ^{ 
+       printf("I am called at the end !\n");}
+    );
+```
+]
+---
+class: smallcode
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+  ### Barriers
+]
+
+.right-column[
+
+Barriers offers a very elegent way to synchronize tasks within a concurrent queue :
+```objc
+dispatch_block_t readTask1 = ^{ printf("Reading ...\n");},
+                 readTask2 = ^{ printf("Reading ...\n");},
+                 readTask3 = ^{ printf("Reading ...\n");},
+                 writeTask4 = ^{printf("Writing \n");};
+
+dispatch_queue_t queue;
+queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
+
+dispatch_async(queue,readTask1);
+dispatch_async(queue,readTask2);
+
+dispatch_barrier_async(queue,writeTask4);
+
+dispatch_async(queue,readTask3);
+```
+]
+---
+.left-column[
+  ## Grand Central Dispatch
+  ### API
+  ### Queues
+  ### Tasks
+  ### Dispatch group
+  ### Barriers
+  ### More
+]
+
+.right-column[
+Lot of others features :
+
+*   Target Queue
+*   Semaphores
+*   Dispatch sources
+*   Queue Data
+*   Dispatch I/O
+
+See : 
+
+*   [Concurrency Programming Guide](https://developer.apple.com/library/ios/documentation/General/Conceptual/ConcurrencyProgrammingGuide/Introduction/Introduction.html)
+
+*   [NSBlog](https://www.mikeash.com/pyblog/) - Topics on GCD
+
+* [CocoaSamurai - Guide to blocks and grand central dispatch](http://cocoasamurai.blogspot.fr/2009/09/guide-to-blocks-grand-central-dispatch.html)
+
+*   WWDC 2011 - *Mastering Grand Central Dispatch*
+
+*   WWDC 2010 - *Introducing Blocks and Grand Central Dispatch on iPhone*
+
+*   WWDC 2010 - *Simplifying iPhone App Development with Grand Central Dispatch*
+]
+---
+class: center, middle, inverse
+# NSOperation
+---
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+]
+
+.right-column[
+
+NSOperation is built on top of GCD :
+
+*   Higher-level of abstraction
+
+*   Objective-C API
+
+*   Ready to use with Apple Framework : UIKit, AVFoundation, MapKit, OpenGL, ...
+
+*   Small API - Enough for most basic cases
+
+All magic is hidden in two objects : 
+
+*   `NSOperation` : represents tasks
+*   `NSOperationQueue` : represents queue
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+]
+
+.right-column[
+
+#### Create queues
+
+```objc
+/* Get Main Queue */
+NSOperationQueue * mainQueue = [NSOperationQueue mainQueue];
+
+/* Create Serial Queue */
+NSOperationQueue * serialQueue = [[NSOperationQueue alloc] init];
+serialQueue.name = @"com.company.app.serial";
+serialQueue.maxConcurrentOperationCount = 1;
+
+/* Create Concurrent Queue */
+NSOperationQueue * concurrentQueue = [[NSOperationQueue alloc] init];
+```
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+]
+
+.right-column[
+ 
+ *    Abtract class representing a task.
+
+ *    Need to subclass -> See documentation
+
+ *    Manage queue and thread priorities
+
+ *    Completion block feature
+
+Summerize : 
+
+1. Implement `start`, `main`, `isConcurrent`, `isFinished` and `isExecuting` methods
+
+2. Test for cancel events in your `main` and `start` methods when necessary
+
+3. Add operation to a queue
+
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+  ### Example
+]
+
+.right-column[
+
+```objc
+
+NSOperationQueue * concurrentQueue = [[NSOperationQueue alloc] init];
+
+MyCustomOperation* op = [[MyCustomOperation alloc] init];
+
+[concurrentQueue addOperationWithBlock:^{ printf("Hello \n");}];
+[concurrentQueue addOperationWithBlock:^{ printf("World \n");}];
+
+[concurrentQueue addOperation:op];
+
+[concurrentQueue waitUntilAllOperationsAreFinished];
+```
+
+]
+---
+class: smallcode
+.left-column[
+  ## NSOperation
+  ### Standing on the shoulders of a giant
+  ### NSOperationQueue
+  ### NSOperation
+  ### Example
+  ### Synchronisation
+]
+
+.right-column[
+Easy to synchronise tasks with dependency :
+
+```objc
+
+NSBlockOperation * a = [NSBlockOperation blockOperationWiBlock:^{ printf("A\n");}];
+NSBlockOperation * b = [NSBlockOperation blockOperationWiBlock:^{ printf("B\n");}];
+NSBlockOperation * c = [NSBlockOperation blockOperationWiBlock:^{ printf("C\n");}];
+
+[a addDependency:b];
+[b addDependency:c];
+
+[c.completionBlock:^{ printf("End of C\n");}];
+
+NSOperationQueue * queue = [[NSOperationQueue alloc] init];
+
+[queue addOperation:a];
+[queue addOperation:b];
+[queue addOperation:c];
+```
+
+]
+  </textarea>
+    <script src="http://gnab.github.io/remark/downloads/remark-0.6.0.min.js" type="text/javascript">
+    </script>
+    <script type="text/javascript">
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
