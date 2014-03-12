@@ -172,7 +172,7 @@ A specific amount of time is allowed to units by the scheduler :
 
 * The strategy used depends on the operating system. 
 
-* Multi-tasks systems often use a variant of *Round-Robin* with priorities.It is a time based multiplexer algorithm. 
+* Multi-tasks systems often use a variant of *Round-Robin* with priorities. It is a time based multiplexer algorithm. 
 
 ![Round-Robin](images/rr.png)
 .footnote[Source : *Modern Operating Systems* - Andrew S. Tannenbaum]
@@ -287,9 +287,9 @@ For more informations :
 
 .right-column[
 
-Apple provide its own abstraction of run loop using  the `NSRunLoop` class. 
+Apple provides its own abstraction of run loop using the `NSRunLoop` class. 
 
-Each thread has a run loop, but **only the main thread** starts automatically it.
+Each thread has a run loop, but **only the main thread** starts it automatically.
 
 ![NSRunLoop sequence diagramm](images/nsrunloop.jpg)
 
@@ -308,7 +308,7 @@ Handlers for events are created using the `CFRunLoopSourceRef` object.
 
 For input events as mouse or keayboard events, `NSPort`, `NSConnection` and `NSTimer`, the corresponding `CFRunLoopSourceRef` are managed automatically.
 
-It's possible to create custom source of events : [Threading Programming Guide - Configuring Run Loop Sources](https://developer.apple.com/library/ios/documentation/cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html#//apple_ref/doc/uid/10000057i-CH16-SW7)
+It's possible to create custom sources of events : [Threading Programming Guide - Configuring Run Loop Sources](https://developer.apple.com/library/ios/documentation/cocoa/Conceptual/Multithreading/RunLoopManagement/RunLoopManagement.html#//apple_ref/doc/uid/10000057i-CH16-SW7)
 
 ![Custom input sources](images/custominputsource.jpg)
 ]
@@ -322,8 +322,7 @@ class: center, middle, inverse
 ]
 .right-column[
 
-*   Concurrency : Concurrency
-Programming as the composition of independently executing processes.
+*   Concurrency : Programming as the composition of independently executing processes.
 
 *   Parallelism : Programming as the simultaneous execution of (possibly related) computations.
 
@@ -374,7 +373,7 @@ Example of patterns to use :
 *   `NSConditionLock`
 *   `NSDistributedLock`
 *   `NSCondition`
-*   `@synchronisze(lock)` statement
+*   `@synchronize(lock)` statement
 *   Atomic operations `OSAtomicOr32`, `OSAtomicAdd32`,...
 *   POSIX threads, conditions and mutex
 
@@ -440,9 +439,9 @@ class: smallcode
 Download an URL asynchronously in the background and get notified in the main thread ? (before iOS 5)
 
 ```objc
-@implementation AFURLConnectionOperation
 /* AFNetworking : https://github.com/AFNetworking/AFNetworking */
 
+@implementation AFURLConnectionOperation
 /* Call in NSThread initWithTarget:selector:object */
 
 + (void)networkRequestThreadEntryPoint:(id)__unused object {
@@ -544,7 +543,7 @@ GCD was developped by Apple Inc. and released in the `libdispatch` library.
 
 Queues are either **concurrent** or **serial**
 
-*   Serial queue : tasks are executed one a a time in FIFO style.
+*   Serial queue : tasks are executed one a time in FIFO style.
 
 *   Concurrent queue : tasks are runned concurrently
 
@@ -563,7 +562,7 @@ dispatch_queue_t * mainQueue = dispatch_get_main_queue();
 
 /* Get globals concurrent queue */
 dispatch_queue_t * concurrent = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
-dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
+dispatch_queue_t * concurrent2 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0);
 dispatch_queue_t * concurrent3 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0);
 dispatch_queue_t * concurrent4 = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_BACKGROUND,0);
 
@@ -675,7 +674,7 @@ dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 
 .right-column[
 
-*   Manually force increment/decrement the outstanding tasks counter with `dispatch_group_enter` and `dispatch_group_enter`
+*   Manually force increment/decrement the outstanding tasks counter with `dispatch_group_enter` and `dispatch_group_leave`
 ```objc
   
     dispatch_group_enter(group);
@@ -808,7 +807,7 @@ NSOperationQueue * mainQueue = [NSOperationQueue mainQueue];
 /* Create Serial Queue */
 NSOperationQueue * serialQueue = [[NSOperationQueue alloc] init];
 serialQueue.name = @"com.company.app.serial";
-serialQueue.maxConcurrentOperationCount = 0;
+serialQueue.maxConcurrentOperationCount = 1;
 
 /* Create Concurrent Queue */
 NSOperationQueue * concurrentQueue = [[NSOperationQueue alloc] init];
@@ -827,7 +826,7 @@ class: smallcode
  
  *    Abtract class representing a task.
 
- *    Need to subclass -> See Documentation
+ *    Need to subclass -> See documentation
 
  *    Manage queue and thread priorities
 
